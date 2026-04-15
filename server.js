@@ -116,6 +116,7 @@ app.get("/", async (_req, res) => {
       table.total = totalByTable.get(table.name) ?? 0;
     });
   } catch (error) {
+    console.error(error);
     dbError = error.message;
   }
 
@@ -151,6 +152,7 @@ app.get("/api/health", async (_req, res) => {
     await testConnection();
     res.json({ status: "ok", database: "connected" });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ status: "error", database: error.message });
   }
 });
@@ -192,11 +194,12 @@ app.get("/api/overviews/:overviewSlug", async (req, res) => {
       data: rows
     });
   } catch (error) {
+    console.error(error);
     return res.status(500).json({ error: error.message });
   }
 });
 
-app.get("/api/tables", (_req, res) => {
+app.get("/api/tables",(_req, res) => {
   res.json({
     total: schoolTables.length,
     data: schoolTables.map((table) => ({
@@ -232,6 +235,7 @@ app.get("/api/tables/:tableName", async (req, res) => {
       data: rows
     });
   } catch (error) {
+    console.error(error);
     return res.status(500).json({ error: error.message });
   }
 });
@@ -270,6 +274,7 @@ app.get("/overview/:overviewSlug", async (req, res) => {
       clientFetch: false
     });
   } catch (error) {
+    console.error(error);
     return res.status(500).render("overview", {
       currentPage: overviewSlug,
       overviewMeta,
@@ -303,6 +308,7 @@ app.get("/table/:tableName", async (req, res) => {
       rows
     });
   } catch (error) {
+    console.error(error);
     return res.status(500).render("table", {
       currentPage: tableName,
       tableMeta,
