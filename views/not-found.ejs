@@ -1,0 +1,16 @@
+<%- include("partials/head", { title: "Not Found" }) %>
+
+<main class="app-shell">
+  <%- include("partials/header", { currentPage }) %>
+
+  <section class="content">
+    <section class="message-card">
+      <p class="eyebrow">404</p>
+      <h2>Page not found</h2>
+      <p><%= message %></p>
+      <a class="secondary-link" href="/">Return to dashboard</a>
+    </section>
+  </section>
+</main>
+
+<%- include("partials/footer") %>

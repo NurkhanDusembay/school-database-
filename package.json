@@ -1,0 +1,25 @@
+{
+  "name": "school-academic-system",
+  "version": "1.0.0",
+  "description": "Basic school academic system website built with Node.js, Express, EJS, and PostgreSQL.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "school",
+    "academic-system",
+    "nodejs",
+    "postgresql",
+    "express"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "pg": "^8.13.3"
+  }
+}

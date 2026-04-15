@@ -1,0 +1,77 @@
+<%- include("partials/head", { title: "Dashboard" }) %>
+
+<main class="app-shell">
+  <%- include("partials/header", { currentPage }) %>
+
+  <section class="content">
+    <div class="hero">
+      <div>
+        <p class="eyebrow">Academic system starter</p>
+        <h2>Simple school website connected to your PostgreSQL database</h2>
+        <p class="hero-copy">
+          This version now gives you two ways to work: readable overview pages for everyday use
+          and raw table pages for admin-style checking.
+        </p>
+      </div>
+
+      <div class="status-card">
+        <span class="status-label">Database status</span>
+        <strong class="<%= dbStatus === 'Connected' ? 'status-ok' : 'status-warning' %>"><%= dbStatus %></strong>
+        <% if (dbError) { %>
+          <p class="status-help"><%= dbError %></p>
+        <% } else { %>
+          <p class="status-help">Set your PostgreSQL values in `.env` and the dashboard will load live data.</p>
+        <% } %>
+      </div>
+    </div>
+
+    <section class="section-block">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Readable views</p>
+          <h3>Overview pages</h3>
+        </div>
+        <p class="section-copy">These pages use joins so you can read names, classes, subjects, and teachers more easily.</p>
+      </div>
+
+      <div class="card-grid">
+        <% overviewCards.forEach((overview) => { %>
+          <article class="info-card">
+            <div class="card-top">
+              <span class="pill">Joined view</span>
+            </div>
+            <h3><%= overview.title %></h3>
+            <p><%= overview.description %></p>
+            <a class="card-link" href="/overview/<%= overview.slug %>">Open overview</a>
+          </article>
+        <% }) %>
+      </div>
+    </section>
+
+    <section class="section-block">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Admin layer</p>
+          <h3>Raw table pages</h3>
+        </div>
+        <p class="section-copy">These are useful when you want to check original IDs and direct database rows.</p>
+      </div>
+
+      <div class="card-grid">
+        <% tableCards.forEach((table) => { %>
+          <article class="info-card">
+            <div class="card-top">
+              <span class="pill"><%= table.title %></span>
+              <strong class="count"><%= table.total === null ? "--" : table.total %></strong>
+            </div>
+            <h3><%= table.title %></h3>
+            <p><%= table.description %></p>
+            <a class="card-link" href="/table/<%= table.name %>">Open table</a>
+          </article>
+        <% }) %>
+      </div>
+    </section>
+  </section>
+</main>
+
+<%- include("partials/footer") %>

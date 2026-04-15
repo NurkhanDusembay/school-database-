@@ -1,0 +1,101 @@
+<%- include("partials/head", { title: overviewMeta.title }) %>
+
+<main class="app-shell">
+  <%- include("partials/header", { currentPage }) %>
+
+  <section class="content">
+    <div class="page-heading">
+      <div>
+        <p class="eyebrow">Readable overview</p>
+        <h2><%= overviewMeta.title %></h2>
+        <p class="hero-copy"><%= overviewMeta.description %></p>
+      </div>
+      <a class="secondary-link" href="/">Back to dashboard</a>
+    </div>
+
+    <section class="message-card overview-summary">
+      <span class="pill"><%= clientFetch ? "API + Fetch" : "Joined query" %></span>
+      <h3><%= overviewMeta.title %></h3>
+      <p>
+        <%= overviewMeta.summary %>
+        <% if (clientFetch) { %>
+          This page now loads its rows from the REST API using browser JavaScript.
+        <% } %>
+      </p>
+    </section>
+
+    <% if (clientFetch) { %>
+      <section class="message-card" id="overview-loading">
+        <h3>Loading data</h3>
+        <p>Students overview is fetching data from <code><%= apiUrl %></code>.</p>
+      </section>
+
+      <section class="message-card error-card is-hidden" id="overview-error">
+        <h3>Could not load this overview</h3>
+        <p id="overview-error-text">The API request did not complete.</p>
+      </section>
+
+      <section class="message-card is-hidden" id="overview-empty">
+        <h3>No rows found yet</h3>
+        <p>This overview is connected, but it does not have any matching data right now.</p>
+      </section>
+    <% } else if (typeof error !== "undefined" && error) { %>
+      <section class="message-card error-card">
+        <h3>Could not load this overview</h3>
+        <p><%= error %></p>
+      </section>
+    <% } else if (rows.length === 0) { %>
+      <section class="message-card">
+        <h3>No rows found yet</h3>
+        <p>This overview is connected, but it does not have any matching data right now.</p>
+      </section>
+    <% } %>
+
+    <% if (columns.length > 0 || clientFetch) { %>
+      <section class="table-card">
+        <div class="table-head">
+          <div>
+            <h3>Overview data</h3>
+            <p>
+              Showing up to <%= overviewMeta.limit %> readable rows
+              <%= clientFetch ? "loaded from the API." : "from the joined school view." %>
+            </p>
+          </div>
+        </div>
+
+        <div class="table-wrap"<% if (clientFetch) { %> data-overview-api="<%= apiUrl %>"<% } %>>
+          <table id="<%= clientFetch ? 'overview-api-table' : '' %>">
+            <thead id="<%= clientFetch ? 'overview-api-head' : '' %>">
+              <tr>
+                <% columns.forEach((column) => { %>
+                  <th><%= column.replaceAll("_", " ") %></th>
+                <% }) %>
+              </tr>
+            </thead>
+            <tbody id="<%= clientFetch ? 'overview-api-body' : '' %>">
+              <% if (clientFetch) { %>
+                <tr>
+                  <td class="table-state-cell" colspan="<%= overviewMeta.columns.length %>">Loading rows from the API...</td>
+                </tr>
+              <% } else { %>
+                <% rows.forEach((row) => { %>
+                  <tr>
+                    <% columns.forEach((column) => { %>
+                      <td><%= formatValue(row[column]) %></td>
+                    <% }) %>
+                  </tr>
+                <% }) %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    <% } %>
+  </section>
+</main>
+
+<% if (clientFetch) { %>
+  <script src="/js/overview-api.js"></script>
+<% } %>
+
+<%- include("partials/footer") %>

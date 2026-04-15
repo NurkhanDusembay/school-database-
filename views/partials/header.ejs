@@ -1,0 +1,26 @@
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-mark">SA</div>
+    <div>
+      <p class="brand-kicker">Node.js Dashboard</p>
+      <h1>School Academic</h1>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <p class="nav-label">Overview</p>
+    <a class="<%= currentPage === 'dashboard' ? 'active' : '' %>" href="/">Dashboard</a>
+    <% overviewPages.forEach((overview) => { %>
+      <a class="<%= currentPage === overview.slug ? 'active' : '' %>" href="/overview/<%= overview.slug %>">
+        <%= overview.title %>
+      </a>
+    <% }) %>
+
+    <p class="nav-label">Raw Tables</p>
+    <% schoolTables.forEach((table) => { %>
+      <a class="<%= currentPage === table.name ? 'active' : '' %>" href="/table/<%= table.name %>">
+        <%= table.title %>
+      </a>
+    <% }) %>
+  </nav>
+</aside>

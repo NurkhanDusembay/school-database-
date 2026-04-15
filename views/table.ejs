@@ -1,0 +1,62 @@
+<%- include("partials/head", { title: tableMeta.title }) %>
+
+<main class="app-shell">
+  <%- include("partials/header", { currentPage }) %>
+
+  <section class="content">
+    <div class="page-heading">
+      <div>
+        <p class="eyebrow">Database table</p>
+        <h2><%= tableMeta.title %></h2>
+        <p class="hero-copy"><%= tableMeta.description %></p>
+      </div>
+      <a class="secondary-link" href="/">Back to dashboard</a>
+    </div>
+
+    <% if (typeof error !== "undefined" && error) { %>
+      <section class="message-card error-card">
+        <h3>Could not load this table</h3>
+        <p><%= error %></p>
+      </section>
+    <% } else if (rows.length === 0) { %>
+      <section class="message-card">
+        <h3>No rows found yet</h3>
+        <p>The table is connected, but there is no data to display right now.</p>
+      </section>
+    <% } %>
+
+    <% if (columns.length > 0) { %>
+      <section class="table-card">
+        <div class="table-head">
+          <div>
+            <h3>Preview</h3>
+            <p>Showing up to 20 rows from the `<%= tableMeta.name %>` table with original database columns.</p>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <% columns.forEach((column) => { %>
+                  <th><%= column %></th>
+                <% }) %>
+              </tr>
+            </thead>
+            <tbody>
+              <% rows.forEach((row) => { %>
+                <tr>
+                  <% columns.forEach((column) => { %>
+                    <td><%= formatValue(row[column]) %></td>
+                  <% }) %>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    <% } %>
+  </section>
+</main>
+
+<%- include("partials/footer") %>
