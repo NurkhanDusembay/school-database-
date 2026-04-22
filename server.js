@@ -1,10 +1,22 @@
 const path = require("path");
 const express = require("express");
+const session = require("express-session");
 require("dotenv").config();
 
 const { pool, testConnection } = require("./src/db");
 const { overviewPages, isAllowedOverview, getOverviewMeta } = require("./src/overviews");
 const { schoolTables, isAllowedTable, getTableMeta } = require("./src/tables");
+const {
+  hashPassword,
+  verifyPassword,
+  createUser,
+  findUserByEmail,
+  generateOtp,
+  saveOtp,
+  verifyOtp,
+  sendOtpEmail,
+  requireAuth
+} = require("./src/auth");
 
 const app = express();
 const host = process.env.HOST || "127.0.0.1";
@@ -31,7 +43,23 @@ app.locals.formatValue = (value) => {
 };
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, "public")));
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "dev-secret-change-in-production",
+    resave: false,
+    saveUninitialized: false,
+    cookie: { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 }
+  })
+);
+app.use((req, res, next) => {
+  res.locals.currentUser =
+    req.session && req.session.authenticated
+      ? { id: req.session.userId, email: req.session.userEmail }
+      : null;
+  next();
+});
 app.use((_, res, next) => {
   res.locals.overviewPages = overviewPages;
   res.locals.schoolTables = schoolTables;
@@ -87,7 +115,143 @@ async function getTableData(tableName, limit = rawTableLimit) {
   };
 }
 
-app.get("/", async (_req, res) => {
+// ── Auth routes ────────────────────────────────────────────────────────────
+
+app.get("/login", (req, res) => {
+  if (req.session && req.session.authenticated) return res.redirect("/");
+  res.render("login", { title: "Sign In", error: null, formEmail: "" });
+});
+
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+  const invalidMsg = "Invalid email or password.";
+
+  let user;
+  try {
+    user = await findUserByEmail(email || "");
+  } catch (error) {
+    console.error(error);
+    return res.render("login", { title: "Sign In", error: "Something went wrong. Please try again.", formEmail: email || "" });
+  }
+
+  if (!user) {
+    return res.render("login", { title: "Sign In", error: invalidMsg, formEmail: email || "" });
+  }
+
+  const valid = await verifyPassword(password || "", user.password_hash);
+  if (!valid) {
+    return res.render("login", { title: "Sign In", error: invalidMsg, formEmail: email || "" });
+  }
+
+  try {
+    const code = generateOtp();
+    await saveOtp(user.id, code);
+    await sendOtpEmail(user.email, code);
+  } catch (error) {
+    console.error(error);
+    return res.render("login", { title: "Sign In", error: "Failed to send verification email. Please try again.", formEmail: email || "" });
+  }
+
+  req.session.pendingUserId = user.id;
+  req.session.pendingUserEmail = user.email;
+  res.redirect("/verify-2fa");
+});
+
+app.get("/register", (req, res) => {
+  if (req.session && req.session.authenticated) return res.redirect("/");
+  res.render("register", { title: "Register", error: null, formEmail: "" });
+});
+
+app.post("/register", async (req, res) => {
+  const { email, password, confirmPassword } = req.body;
+
+  if (!email || !password) {
+    return res.render("register", { title: "Register", error: "Email and password are required.", formEmail: email || "" });
+  }
+  if (password.length < 8) {
+    return res.render("register", { title: "Register", error: "Password must be at least 8 characters.", formEmail: email });
+  }
+  if (password !== confirmPassword) {
+    return res.render("register", { title: "Register", error: "Passwords do not match.", formEmail: email });
+  }
+
+  let existing;
+  try {
+    existing = await findUserByEmail(email);
+  } catch (error) {
+    console.error(error);
+    return res.render("register", { title: "Register", error: "Registration failed. Please try again.", formEmail: email });
+  }
+
+  if (existing) {
+    return res.render("register", { title: "Register", error: "An account with this email already exists.", formEmail: email });
+  }
+
+  let user;
+  try {
+    const hash = await hashPassword(password);
+    user = await createUser(email, hash);
+  } catch (error) {
+    console.error(error);
+    return res.render("register", { title: "Register", error: "Registration failed. Please try again.", formEmail: email });
+  }
+
+  try {
+    const code = generateOtp();
+    await saveOtp(user.id, code);
+    await sendOtpEmail(user.email, code);
+  } catch (error) {
+    console.error(error);
+    return res.redirect("/login");
+  }
+
+  req.session.pendingUserId = user.id;
+  req.session.pendingUserEmail = user.email;
+  res.redirect("/verify-2fa");
+});
+
+app.get("/verify-2fa", (req, res) => {
+  if (!req.session || !req.session.pendingUserId) return res.redirect("/login");
+  res.render("verify-2fa", { title: "Verify", error: null });
+});
+
+app.post("/verify-2fa", async (req, res) => {
+  if (!req.session || !req.session.pendingUserId) return res.redirect("/login");
+
+  const { code } = req.body;
+  const userId = req.session.pendingUserId;
+  const userEmail = req.session.pendingUserEmail;
+
+  let valid;
+  try {
+    valid = await verifyOtp(userId, (code || "").trim());
+  } catch (error) {
+    console.error(error);
+    return res.render("verify-2fa", { title: "Verify", error: "Verification failed. Please try again." });
+  }
+
+  if (!valid) {
+    return res.render("verify-2fa", { title: "Verify", error: "Invalid or expired code. Please try again." });
+  }
+
+  delete req.session.pendingUserId;
+  delete req.session.pendingUserEmail;
+  req.session.userId = userId;
+  req.session.userEmail = userEmail;
+  req.session.authenticated = true;
+
+  res.redirect("/");
+});
+
+app.post("/logout", (req, res) => {
+  req.session.destroy(() => {
+    res.redirect("/login");
+  });
+});
+
+// ── Protected routes ────────────────────────────────────────────────────────
+
+app.get("/", requireAuth, async (_req, res) => {
   const overviewCards = overviewPages.map((overview) => ({
     ...overview
   }));
@@ -129,7 +293,7 @@ app.get("/", async (_req, res) => {
   });
 });
 
-app.get("/dashboard", (_req, res) => {
+app.get("/dashboard", requireAuth, (_req, res) => {
   res.redirect("/");
 });
 
@@ -240,7 +404,7 @@ app.get("/api/tables/:tableName", async (req, res) => {
   }
 });
 
-app.get("/overview/:overviewSlug", async (req, res) => {
+app.get("/overview/:overviewSlug", requireAuth, async (req, res) => {
   const { overviewSlug } = req.params;
 
   if (!isAllowedOverview(overviewSlug)) {
@@ -286,7 +450,7 @@ app.get("/overview/:overviewSlug", async (req, res) => {
   }
 });
 
-app.get("/table/:tableName", async (req, res) => {
+app.get("/table/:tableName", requireAuth, async (req, res) => {
   const { tableName } = req.params;
 
   if (!isAllowedTable(tableName)) {

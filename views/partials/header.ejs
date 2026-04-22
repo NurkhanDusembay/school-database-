@@ -23,4 +23,13 @@
       </a>
     <% }) %>
   </nav>
+
+  <% if (typeof currentUser !== 'undefined' && currentUser) { %>
+    <div class="nav-user">
+      <p class="nav-user-email"><%= currentUser.email %></p>
+      <form method="POST" action="/logout">
+        <button class="btn-logout" type="submit">Sign out</button>
+      </form>
+    </div>
+  <% } %>
 </aside>
